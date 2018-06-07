@@ -1,5 +1,7 @@
 package provide RealtimeSchedulerStats2 0.1
 
+package provide RealtimeSchedulerDelta 0.1
+
 package require dicttool
 
 namespace eval rts_stats {
@@ -110,7 +112,7 @@ proc ::rts_stats::onTableData {session data} {
    }
 }
 
-proc ::rts_stats::calculateSummary {selectedLine from to current_time session} {
+proc ::rts_stats::calculateSummary {selectedLine from to current_time session {fromSession 1}} {
 	if {[antIsDebug]} {antLog debug [info level 0]}
 	
 	set stats {}
@@ -154,9 +156,8 @@ proc ::rts_stats::calculateSummary {selectedLine from to current_time session} {
 	}
 #	antLog statsHis $stats
 #	antLog currTime $current_time
-	set fromSession 1
-	set timelineData [rts_stats::getTimeLineData $selectedLine $fromSession $session]
-	set area [getSessionData $session DataServer area]
+	set timelineData [rts_stats::getTimeLineData $selectedLine $from $to $current_time $fromSession $session]
+	if {$session ne {}} {set area [getSessionData $session DataServer area]} {set area "PACKAGING"}
 	
 	set stats [::rts_stats::updateStatsCachedData $stats $from $to $current_time $timelineData $area]
 	#antLog statsFuture $stats
@@ -301,9 +302,11 @@ proc ::rts_stats::getProductsRouteDetails {} {
 	return $productsInfoRoute
 }
 
-proc rts_stats::getTimeLineData {line fromSession session} {
+proc rts_stats::getTimeLineData {line from to current_time fromSession session} {
 
 	if {$fromSession} {
+      
+      antLog unforceCache unforceCache
 		#Changeovers planned
 		dict set timelineData changeoversEvents {}
 		#External times planned
@@ -315,10 +318,6 @@ proc rts_stats::getTimeLineData {line fromSession session} {
 		#Planned orders
 		dict set timelineData ordersEvents {}
 		
-		if {[dict exists [getSessionData $session DataServer changeoversData] $line]} {
-			dict set timelineData changeoversEvents [dict get [getSessionData $session DataServer changeoversData] $line]  
-		}
-
 		if {[dict exists [getSessionData $session DataServer breaksData] $line]} {
 			dict set timelineData breaksData [dict get [getSessionData $session DataServer breaksData] $line]
 		}
@@ -334,6 +333,40 @@ proc rts_stats::getTimeLineData {line fromSession session} {
 		if {[dict exists [getSessionData $session DataServer ordersData] $line]} {
 			dict set timelineData ordersEvents [dict get [getSessionData $session DataServer ordersData] $line]
 		}
+		
+		if {[dict exists [getSessionData $session DataServer changeoversData] $line]} {
+			dict set timelineData changeoversEvents [dict get [getSessionData $session DataServer changeoversData] $line]  
+		}
+	} else {
+      #antLog forceCache forceCache
+      
+		set sourceId [lindex [split $line _] 0]
+		set equipmentTag [join [lrange [split $line _] 1 end] _]
+	
+		lassign [planning::getStackData $sourceId $equipmentTag $from $to] ordersData changeoversData
+		
+		#antLog getStackData getStackData
+		
+		dict set timelineData breaksData [dict getnull [planning::getExternalTimesDelta $sourceId $equipmentTag $from $to $current_time] $line]
+		
+		#antLog getStackData getStackData2
+		
+		dict set timelineData downTimeDataChangeover [dict getnull [planning::getDowntimeDataChangeover 0 $equipmentTag $from $to] $line]
+		
+		#antLog getStackData getStackData3
+		
+		dict set timelineData downTimeDataBreaks [dict getnull [planning::getDowntimeData 0 $equipmentTag $from $to] $line]
+		
+		#antLog getStackData getStackData4
+		
+		dict set timelineData ordersEvents [dict getnull $ordersData $line]
+		
+		#antLog getStackData getStackData5
+		
+		dict set timelineData changeoversEvents [dict getnull $changeoversData $line]
+		
+		#antLog getStackData getStackData6
+
 	}
 	return $timelineData
 }
@@ -344,23 +377,26 @@ proc ::rts_stats::updateStatsCachedData {stats from to current_time cachedData a
 	set OTHER {}
 	set OTHER_CO {}
 	set CLIPBOARD {}
-	
-	set changeoversEvents [dict get $timelineData changeoversEvents]
+	antLog a1 a1
+	set changeoversEvents [dict get $cachedData changeoversEvents]
 	#External times planned
-	set breaksData [dict get $timelineData breaksData]
+	set breaksData [dict get $cachedData breaksData]
+   antLog a2 a2
 	#Changeovers history
-	set downTimeDataChangeover [dict get $timelineData downTimeDataChangeover]
+	set downTimeDataChangeover [dict get $cachedData downTimeDataChangeover]
+   antLog a3 a3
 	#External times history
-	set downTimeDataBreaks [dict get $timelineData downTimeDataBreaks]
+	set downTimeDataBreaks [dict get $cachedData downTimeDataBreaks]
 	#Planned orders
-	set ordersEvents [dict get $timelineData ordersEvents]
+	set ordersEvents [dict get $cachedData ordersEvents]
+   antLog a9 a9
 
 	if {$area eq "MANUFACTURING"} {
 		set mergedWorkTime [mergeEventsTime $ordersEvents $breaksData $from $to $current_time]
 	}
-
+antLog a9 a9
 	set Events [::rts_stats::createAndSortEvents $ordersEvents $changeoversEvents $breaksData $from $to $current_time]
-
+antLog a9 a10
 	set visible_end {}
 	set prevOrder {}
 	
