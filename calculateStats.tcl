@@ -154,10 +154,11 @@ proc ::rts_stats::calculateSummary {selectedLine from to current_time session} {
 	}
 #	antLog statsHis $stats
 #	antLog currTime $current_time
-
-	#if {$current_time > $from} {set startFuture $current_time} {set startFuture $from}
-	set stats [::rts_stats::updateStatsCachedData $stats $selectedLine $from $to $current_time $session]
+	set fromSession 1
+	set timelineData [rts_stats::getTimeLineData $selectedLine $fromSession $session]
+	set area [getSessionData $session DataServer area]
 	
+	set stats [::rts_stats::updateStatsCachedData $stats $from $to $current_time $timelineData $area]
 	#antLog statsFuture $stats
 	dict set stats units [::rts_stats::getUnit $selectedLine]
 	return $stats
@@ -300,41 +301,60 @@ proc ::rts_stats::getProductsRouteDetails {} {
 	return $productsInfoRoute
 }
 
-proc ::rts_stats::updateStatsCachedData {stats line from to current_time session} {
+proc rts_stats::getTimeLineData {line fromSession session} {
+
+	if {$fromSession} {
+		#Changeovers planned
+		dict set timelineData changeoversEvents {}
+		#External times planned
+		dict set timelineData breaksData {}
+		#Changeovers history
+		dict set timelineData downTimeDataChangeover {}
+		#External times history
+		dict set timelineData downTimeDataBreaks {}
+		#Planned orders
+		dict set timelineData ordersEvents {}
+		
+		if {[dict exists [getSessionData $session DataServer changeoversData] $line]} {
+			dict set timelineData changeoversEvents [dict get [getSessionData $session DataServer changeoversData] $line]  
+		}
+
+		if {[dict exists [getSessionData $session DataServer breaksData] $line]} {
+			dict set timelineData breaksData [dict get [getSessionData $session DataServer breaksData] $line]
+		}
+
+		if {[dict exists [getSessionData $session DataServer downTimeDataChangeover] $line]} {
+			dict set timelineData downTimeDataChangeover [dict get [getSessionData $session DataServer downTimeDataChangeover] $line]
+		}
+
+		if {[dict exists [getSessionData $session DataServer downTimeDataBreaks] $line]} {
+			dict set timelineData downTimeDataBreaks [dict get [getSessionData $session DataServer downTimeDataBreaks] $line]
+		}
+
+		if {[dict exists [getSessionData $session DataServer ordersData] $line]} {
+			dict set timelineData ordersEvents [dict get [getSessionData $session DataServer ordersData] $line]
+		}
+	}
+	return $timelineData
+}
+
+proc ::rts_stats::updateStatsCachedData {stats from to current_time cachedData area} {
 	if {[antIsDebug]} {antLog debug [info level 0]}
 
-	set area [getSessionData $session DataServer area]
-	
 	set OTHER {}
 	set OTHER_CO {}
 	set CLIPBOARD {}
-
-	#Changeovers planned
-	set changeoversEvents {}
-	if {[dict exists [getSessionData $session DataServer changeoversData] $line]} {
-		set changeoversEvents [dict get [getSessionData $session DataServer changeoversData] $line]  
-	}
-	#External times planned
-	set breaksData {}
-	if {[dict exists [getSessionData $session DataServer breaksData] $line]} {
-	  set breaksData [dict get [getSessionData $session DataServer breaksData] $line]
-	}
-	#Changeovers history
-	set downTimeDataChangeover {}
-	if {[dict exists [getSessionData $session DataServer downTimeDataChangeover] $line]} {
-	  set downTimeDataChangeover [dict get [getSessionData $session DataServer downTimeDataChangeover] $line]
-	}
-	#External times history
-	set downTimeDataBreaks {}
-	if {[dict exists [getSessionData $session DataServer downTimeDataBreaks] $line]} {
-	  set downTimeDataBreaks [dict get [getSessionData $session DataServer downTimeDataBreaks] $line]
-	}
-	#Planned orders
-	set ordersEvents {}
-	if {[dict exists [getSessionData $session DataServer ordersData] $line]} {
-	  set ordersEvents [dict get [getSessionData $session DataServer ordersData] $line]
-	}
 	
+	set changeoversEvents [dict get $timelineData changeoversEvents]
+	#External times planned
+	set breaksData [dict get $timelineData breaksData]
+	#Changeovers history
+	set downTimeDataChangeover [dict get $timelineData downTimeDataChangeover]
+	#External times history
+	set downTimeDataBreaks [dict get $timelineData downTimeDataBreaks]
+	#Planned orders
+	set ordersEvents [dict get $timelineData ordersEvents]
+
 	if {$area eq "MANUFACTURING"} {
 		set mergedWorkTime [mergeEventsTime $ordersEvents $breaksData $from $to $current_time]
 	}
