@@ -377,26 +377,23 @@ proc ::rts_stats::updateStatsCachedData {stats from to current_time cachedData a
 	set OTHER {}
 	set OTHER_CO {}
 	set CLIPBOARD {}
-	antLog a1 a1
+	
 	set changeoversEvents [dict get $cachedData changeoversEvents]
 	#External times planned
 	set breaksData [dict get $cachedData breaksData]
-   antLog a2 a2
 	#Changeovers history
 	set downTimeDataChangeover [dict get $cachedData downTimeDataChangeover]
-   antLog a3 a3
 	#External times history
 	set downTimeDataBreaks [dict get $cachedData downTimeDataBreaks]
 	#Planned orders
 	set ordersEvents [dict get $cachedData ordersEvents]
-   antLog a9 a9
 
 	if {$area eq "MANUFACTURING"} {
 		set mergedWorkTime [mergeEventsTime $ordersEvents $breaksData $from $to $current_time]
 	}
-antLog a9 a9
+	
 	set Events [::rts_stats::createAndSortEvents $ordersEvents $changeoversEvents $breaksData $from $to $current_time]
-antLog a9 a10
+
 	set visible_end {}
 	set prevOrder {}
 	
@@ -1380,9 +1377,6 @@ proc setPageProfit {session} {
 		set difPcs [expr 1.0 * ([dict get $currTarget sumVisLinesTarget] - [dict get $targetFreezed sumVisLinesTarget]) / 1000]
 		set difOp [expr 1.0 * ([dict get $currTarget sumVisLinesTargetOp] - [dict get $targetFreezed sumVisLinesTargetOp]) / 1000]
 		
-#      antLog difPcs $difPcs
-      
-      
 		if {$difPcs > 0} {
 			set difPcsIcon "<div style='float:right; color:#007f09;'>&nbsp(<i class='fa fa-caret-up'></i> [format %.1f $difPcs])</div>"
 			set difOpIcon "<div style='float:right; color:#007f09;'>&nbsp(<i class='fa fa-caret-up'></i> [format %.1f $difOp])</div>"
