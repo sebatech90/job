@@ -155,7 +155,6 @@ proc ::rts_stats::calculateSummary {selectedLine from to current_time session {f
 		dict set stats hisDetails [getHistoryOrdersDetails $selectedLine $from $endHistory]
 	}
 #	antLog statsHis $stats
-#	antLog currTime $current_time
 	set timelineData [rts_stats::getTimeLineData $selectedLine $from $to $current_time $fromSession $session]
 	if {$session ne {}} {set area [getSessionData $session DataServer area]} {set area "PACKAGING"}
 	
@@ -306,7 +305,7 @@ proc rts_stats::getTimeLineData {line from to current_time fromSession session} 
 
 	if {$fromSession} {
       
-      antLog unforceCache unforceCache
+      #antLog unforceCache unforceCache
 		#Changeovers planned
 		dict set timelineData changeoversEvents {}
 		#External times planned
